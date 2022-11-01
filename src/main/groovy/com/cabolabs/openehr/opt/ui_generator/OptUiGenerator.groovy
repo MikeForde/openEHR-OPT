@@ -148,7 +148,7 @@ class OptUiGenerator {
       switch (node.rmTypeName)
       {
          case 'DV_TEXT':
-            builder.texarea(class: node.rmTypeName +' form-control', name:node.path, '')
+            builder.textarea(class: node.rmTypeName +' form-control', name:node.path, '')
          break
          case 'DV_CODED_TEXT':
 
