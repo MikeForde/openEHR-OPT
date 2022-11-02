@@ -26,6 +26,15 @@ class OptCcGenerator {
    private int optId = 2058
    private int initOptId
 
+   // Control location
+   private int iCtrlX = 13
+   private int iCtrlY = 5
+
+   // Form size
+   private int pgHeight = 800
+
+   private Boolean debug = false
+
    String generate(OperationalTemplate opt)
    {
       this.opt = opt
@@ -43,7 +52,6 @@ class OptCcGenerator {
 
       // cCube form parameters - these may need to be changed depending on number of controls
       def pgWidth = 600
-      def pgHeight = 600
       
 
       // Generates HTML while traversing the archetype tree
@@ -76,8 +84,8 @@ class OptCcGenerator {
             FORMID (frmId)
             PAGENAME(frmId + '_page')
             HELPTEXT {}
-            FORECOLOUR ('16777216')
-            BACKCOLOUR ('-1')
+            FORECOLOR ('16777216')
+            BACKCOLOR ('-1')
             FONTNAME ('Arial')
             FONTSIZE ('9')
             WIDTH (pgWidth) // Need to calculate these based on number of controls in final version
@@ -94,13 +102,29 @@ class OptCcGenerator {
             BACKSHADING ('Clear')
             SHADINGCOLOUR ('-16777216')
          }
-         // TBLPAGECONTROLCOMMONPROPERTIES - one per control including seperate ones for labels
-         // Need a way of passing back need for validation elements
-         
+         if(debug) mkp.yieldUnescaped '\n\n  '
+
+         // Three pass process
+         // First Pass --> TBLPAGECONTROLCOMMONPROPERTIES - one per control including seperate ones for labels
          initOptId = optId
+         println 'Common Properties'
+         if(debug) mkp.comment('Common Properties')
+         if(debug) mkp.yieldUnescaped '\n  '
          genCtrlCommonProps(opt.definition, builder, opt.definition.archetypeId)
-         optId = initOptId
+
+         // Second Pass --> TBLPAGECONTROLPROPERTIES - one per control including seperate ones for labels
+         optId = initOptId // Reset optId so matches above
+         println 'Control Properties'
+         if(debug) mkp.comment('Control Properties')
+         if(debug) mkp.yieldUnescaped '\n  '
          genCtrlProps(opt.definition, builder, opt.definition.archetypeId)
+
+         // Third Pass --> TBLCONTROLVALIDATION - only for DV_QUANTITY and DV_COUNT
+         optId = initOptId // Reset optId so matches above
+         println 'Validation Elements for Quantity and Count'
+         if(debug) mkp.comment('Validation Elements for Quantity and Count')
+         if(debug) mkp.yieldUnescaped '\n  '
+         genCtrlValid(opt.definition, builder, opt.definition.archetypeId)
       }
 
       return writer.toString()
@@ -122,8 +146,9 @@ class OptCcGenerator {
 
       // Calculated position controls
       def normOptId = optId - 2063
-   	def ctrlX = 13
-      def ctrlY = 9 + (normOptId * 50)
+   	// def ctrlX = 13
+      // def ctrlY = 9 + ((iCtrlY - 1) * 26)
+      
 
 
       if (o.rmTypeName == "ELEMENT")
@@ -144,9 +169,10 @@ class OptCcGenerator {
          }
          else
          {
+            if(debug) b.mkp.comment('Label')
             b.TBLPAGECONTROLCOMMONPROPERTIES() {
                // Label
-               OPTIONID (optId)
+               OPTIONID ('OPT' + optId)
                PAGEID (pgId)
                TEMPLATEID {}
                FORMID (frmId)
@@ -154,8 +180,8 @@ class OptCcGenerator {
                CONTROLTYPE ('8')
                PARENTCONTROLID (pgId)
                TEXT(opt.getTerm(parent_arch_id, o.nodeId))
-               XPOSITION (ctrlX)
-               YPOSITION (ctrlY)
+               XPOSITION (iCtrlX)
+               YPOSITION (iCtrlY)
                mkp.yieldUnescaped cCubeStandardCommonXML1()
                WIDTH('120') // may need changing depending on text size
                mkp.yieldUnescaped cCubeStandardCommonXML2()
@@ -164,9 +190,17 @@ class OptCcGenerator {
                CSSSTYLE('eformLabel ')
                mkp.yieldUnescaped cCubeStandardCommonXML4()
             }
+            if(debug) b.mkp.yieldUnescaped '\n\n  '
 
             if (value) {
+               iCtrlY = iCtrlY + 26
                genCtrlCommonPropsFields(value, b, parent_arch_id)
+               if(debug) b.mkp.yieldUnescaped '\n\n\n  '
+            }
+            iCtrlY = iCtrlY + 26
+            if(iCtrlY > (pgHeight- 52)){
+               iCtrlY = 5
+               iCtrlX = iCtrlX + 150
             }
          }
 
@@ -224,8 +258,6 @@ class OptCcGenerator {
    {
       // Calculated position controls
       def normOptId = optId - 2063
-   	def ctrlX = 13
-      def ctrlY = 9 + (normOptId * 50)
 
       switch (node.rmTypeName)
       {
@@ -235,17 +267,18 @@ class OptCcGenerator {
             //builder.textarea(class: node.rmTypeName +' form-control', name:node.path, '')
             optId++
             println node.rmTypeName
+            if(debug) b.mkp.comment(node.rmTypeName)
             b.TBLPAGECONTROLCOMMONPROPERTIES() {
-               OPTIONID (optId)
+               OPTIONID ('OPT' + optId)
                PAGEID (pgId)
                TEMPLATEID {}
                FORMID (frmId)
                CONTROLID('TextBox' + normOptId)
                CONTROLTYPE ('15')
                PARENTCONTROLID (pgId)
-               TEXT {}
-               XPOSITION (ctrlX)
-               YPOSITION (ctrlY)
+               TEXT('')
+               XPOSITION (iCtrlX)
+               YPOSITION (iCtrlY)
                mkp.yieldUnescaped cCubeStandardCommonXML1()
                WIDTH('120') // will need changing depending on text size
                mkp.yieldUnescaped cCubeStandardCommonXML2()
@@ -259,8 +292,9 @@ class OptCcGenerator {
          case 'DV_ORDINAL':
             optId++
             println node.rmTypeName
+            if(debug)  b.mkp.comment(node.rmTypeName)
             b.TBLPAGECONTROLCOMMONPROPERTIES() {
-               OPTIONID (optId)
+               OPTIONID ('OPT' + optId)
                PAGEID (pgId)
                TEMPLATEID {}
                FORMID (frmId)
@@ -268,9 +302,9 @@ class OptCcGenerator {
                CONTROLTYPE ('4')
                PARENTCONTROLID (pgId)
                TEXT {}
-               XPOSITION (ctrlX)
-               YPOSITION (ctrlY)
-               mkp.yieldUnescaped cCubeStandardCommonXML1()
+               XPOSITION (iCtrlX)
+               YPOSITION (iCtrlY)
+               mkp.yieldUnescaped cCubeStandardCommonDropBoxXML()
                WIDTH('120') // will need changing depending on text size
                mkp.yieldUnescaped cCubeStandardCommonXML2()
                TABINDEX(normOptId)
@@ -285,8 +319,9 @@ class OptCcGenerator {
          case 'DV_DATE':
             optId++
             println "DV_DATE"
+            if(debug)  b.mkp.comment(node.rmTypeName)
             b.TBLPAGECONTROLCOMMONPROPERTIES() {
-               OPTIONID (optId)
+               OPTIONID ('OPT' + optId)
                PAGEID (pgId)
                TEMPLATEID {}
                FORMID (frmId)
@@ -294,8 +329,8 @@ class OptCcGenerator {
                CONTROLTYPE ('2')
                PARENTCONTROLID (pgId)
                TEXT {}
-               XPOSITION (ctrlX)
-               YPOSITION (ctrlY)
+               XPOSITION (iCtrlX)
+               YPOSITION (iCtrlY)
                mkp.yieldUnescaped cCubeStandardCommonXML1()
                WIDTH('120') // will need changing depending on text size
                mkp.yieldUnescaped cCubeStandardCommonXML2()
@@ -311,8 +346,9 @@ class OptCcGenerator {
          case 'DV_BOOLEAN':
             optId++
             println "DV_BOOLEAN"
+            if(debug)  b.mkp.comment(node.rmTypeName)
             b.TBLPAGECONTROLCOMMONPROPERTIES() {
-               OPTIONID (optId)
+               OPTIONID ('OPT' + optId)
                PAGEID (pgId)
                TEMPLATEID {}
                FORMID (frmId)
@@ -320,8 +356,8 @@ class OptCcGenerator {
                CONTROLTYPE ('3')
                PARENTCONTROLID (pgId)
                TEXT ('CheckBox' + normOptId)
-               XPOSITION (ctrlX)
-               YPOSITION (ctrlY)
+               XPOSITION (iCtrlX)
+               YPOSITION (iCtrlY)
                mkp.yieldUnescaped cCubeStandardCommonXML1()
                WIDTH('120') // will need changing depending on text size
                mkp.yieldUnescaped cCubeStandardCommonXML2()
@@ -354,6 +390,24 @@ class OptCcGenerator {
       return xmlText
    }
 
+   def cCubeStandardCommonDropBoxXML()
+   {
+      def xmlText = '''
+    <FONTNAME>Arial</FONTNAME>
+    <FONTSIZE>9</FONTSIZE>
+    <BOLD>false</BOLD>
+    <ITALIC>false</ITALIC>
+    <UNDERLINE>false</UNDERLINE>
+    <STRIKEOUT>false</STRIKEOUT>
+    <FORECOLOUR>16777216</FORECOLOUR>
+    <BACKCOLOUR>-1</BACKCOLOUR>
+    <BORDERCOLOUR>-16777216</BORDERCOLOUR>
+    <BORDERSTYLE />
+    <BORDERWIDTH>0</BORDERWIDTH>
+    <HEIGHT>23</HEIGHT>'''
+      return xmlText
+   }
+
    def cCubeStandardCommonXML2()
    {
       def xmlText = '''
@@ -381,7 +435,7 @@ class OptCcGenerator {
       return xmlText
    }
 
-   void genCtrlProps(ObjectNode o, MarkupBuilder b, String parent_arch_id)
+  void genCtrlProps(ObjectNode o, MarkupBuilder b, String parent_arch_id)
    {
       //println "genCtrlProps Called"
       // parent from now can be different than the parent if if the object has archetypeId
@@ -409,16 +463,19 @@ class OptCcGenerator {
          }
          else
          {
+            if(debug)  b.mkp.comment('Label')
             b.TBLPAGECONTROLPROPERTIES() {
                // Label
                PROPERTYID('CTRLPR' + optId)
-               OPTIONID (optId)
+               OPTIONID ('OPT' + optId)
                FORMID (frmId)
                mkp.yieldUnescaped cCubeStandardLabelXML()
             }
+            if(debug)  b.mkp.yieldUnescaped '\n\n  '
 
             if (value) {
                genCtrlPropsFields(value, b, parent_arch_id)
+               if(debug)  b.mkp.yieldUnescaped '\n\n\n  '
             }
          }
          
@@ -476,35 +533,69 @@ class OptCcGenerator {
             //builder.textarea(class: node.rmTypeName +' form-control', name:node.path, '')
             optId++
             println node.rmTypeName
+            if(debug)  b.mkp.comment(node.rmTypeName)
             b.TBLPAGECONTROLPROPERTIES() {
                PROPERTYID('CTRLPR' + optId)
-               OPTIONID (optId)
+               OPTIONID ('OPT' + optId)
                FORMID (frmId)
                mkp.yieldUnescaped cCubeStandardTextboxXML()
             }
          break
-         case 'DV_CODED_TEXT':
-         case 'DV_ORDINAL':
+         case 'DV_CODED_TEXT': // Dropdown
             optId++
             println node.rmTypeName
+            if(debug)  b.mkp.comment(node.rmTypeName)
+            // Get the dropdown items
+            def constraint = node.attributes.find{ it.rmAttributeName == 'defining_code' }.children[0]
+            def listItems = []
+            constraint.codeList.each { code_node ->
+                             listItems.add(opt.getTerm(parent_arch_id, code_node))
+                           }
+            def listItemsAsString = listItems.join(",")
+            // Build xml
             b.TBLPAGECONTROLPROPERTIES() {
-               OPTIONID (optId)
-               PAGEID (pgId)
-               TEMPLATEID {}
+               PROPERTYID('CTRLPR' + optId)
+               OPTIONID ('OPT' + optId)
                FORMID (frmId)
-               CONTROLID('DropDownList' + normOptId)
-               CONTROLTYPE ('4')
-               PARENTCONTROLID (pgId)
-               TEXT {}
-               XPOSITION (ctrlX)
-               YPOSITION (ctrlY)
-               mkp.yieldUnescaped cCubeStandardCommonXML1()
-               WIDTH('120') // will need changing depending on text size
-               mkp.yieldUnescaped cCubeStandardCommonXML2()
-               TABINDEX(normOptId)
-               mkp.yieldUnescaped cCubeStandardCommonXML3()
-               CSSSTYLE('eformDropDownList ')
-               mkp.yieldUnescaped cCubeStandardCommonXML4()
+               mkp.yieldUnescaped cCubeStandardDropDownXML1()
+               ITEMSCOLLECTION(listItemsAsString)
+               mkp.yieldUnescaped cCubeStandardDropDownXML2()
+            }
+         break
+         case 'DV_ORDINAL': // Dropdown
+            optId++
+            println node.rmTypeName
+            if(debug)  b.mkp.comment(node.rmTypeName)
+            // Get the dropdown items
+            def listItems = []
+            def ordinals = [] 
+            node.list.each { ord ->
+   	            ordinals.add(ord.value)
+                  listItems.add(opt.getTerm(parent_arch_id, ord.symbol.codeString))
+                  }
+            def listItemsAsString = listItems.join(",")
+            def ordinalsAsString = ordinals.join(",")
+            // Build xml
+            b.TBLPAGECONTROLPROPERTIES() {
+               PROPERTYID('CTRLPR' + optId)
+               OPTIONID ('OPT' + optId)
+               FORMID (frmId)
+               mkp.yieldUnescaped cCubeStandardDropDownXML1()
+               ITEMSCOLLECTION(listItemsAsString + ':' + ordinalsAsString)
+               mkp.yieldUnescaped cCubeStandardDropDownXML2()
+            }
+         break
+         case 'DV_QUANTITY':
+         case 'DV_COUNT':
+            //builder.textarea(class: node.rmTypeName +' form-control', name:node.path, '')
+            optId++
+            println node.rmTypeName
+            if(debug)  b.mkp.comment(node.rmTypeName)
+            b.TBLPAGECONTROLPROPERTIES() {
+               PROPERTYID('CTRLPR' + optId)
+               OPTIONID ('OPT' + optId)
+               FORMID (frmId)
+               mkp.yieldUnescaped cCubeStandardQuantCountTextboxXML()
             }
          break
          // case 'DV_TIME':
@@ -513,24 +604,12 @@ class OptCcGenerator {
          case 'DV_DATE':
             optId++
             println "DV_DATE"
+            if(debug)  b.mkp.comment(node.rmTypeName)
             b.TBLPAGECONTROLPROPERTIES() {
-               OPTIONID (optId)
-               PAGEID (pgId)
-               TEMPLATEID {}
+               PROPERTYID('CTRLPR' + optId)
+               OPTIONID ('OPT' + optId)
                FORMID (frmId)
-               CONTROLID('Calendar' + normOptId)
-               CONTROLTYPE ('2')
-               PARENTCONTROLID (pgId)
-               TEXT {}
-               XPOSITION (ctrlX)
-               YPOSITION (ctrlY)
-               mkp.yieldUnescaped cCubeStandardCommonXML1()
-               WIDTH('120') // will need changing depending on text size
-               mkp.yieldUnescaped cCubeStandardCommonXML2()
-               TABINDEX(normOptId)
-               mkp.yieldUnescaped cCubeStandardCommonXML3()
-               CSSSTYLE('eformCalendar ')
-               mkp.yieldUnescaped cCubeStandardCommonXML4()
+               mkp.yieldUnescaped cCubeStandardCalendarXML()
             }
          break
          // case 'DV_DATE_TIME':
@@ -539,24 +618,12 @@ class OptCcGenerator {
          case 'DV_BOOLEAN':
             optId++
             println "DV_BOOLEAN"
+            if(debug)  b.mkp.comment(node.rmTypeName)
             b.TBLPAGECONTROLPROPERTIES() {
-               OPTIONID (optId)
-               PAGEID (pgId)
-               TEMPLATEID {}
+               PROPERTYID('CTRLPR' + optId)
+               OPTIONID ('OPT' + optId)
                FORMID (frmId)
-               CONTROLID('CheckBox' + normOptId)
-               CONTROLTYPE ('3')
-               PARENTCONTROLID (pgId)
-               TEXT ('CheckBox' + normOptId)
-               XPOSITION (ctrlX)
-               YPOSITION (ctrlY)
-               mkp.yieldUnescaped cCubeStandardCommonXML1()
-               WIDTH('120') // will need changing depending on text size
-               mkp.yieldUnescaped cCubeStandardCommonXML2()
-               TABINDEX(normOptId)
-               mkp.yieldUnescaped cCubeStandardCommonXML3()
-               CSSSTYLE('eformCheckBox ')
-               mkp.yieldUnescaped cCubeStandardCommonXML4()
+               mkp.yieldUnescaped cCubeStandardCheckBoxXML()
             }
          break
          default: // TODO: generar campos para los DV_INTERVAL
@@ -570,6 +637,97 @@ class OptCcGenerator {
     <IMAGE />
     <IMAGEURL />
     <TARGET />'''
+      return xmlText
+   }
+
+   def cCubeStandardDropDownXML1()
+   {
+      def xmlText = '''
+    <CURRENCY />
+    <MAXLENGTH>0</MAXLENGTH>
+    <IMAGE />
+    <IMAGEURL />
+    <TARGET />
+    <TEXTMODE xml:space="preserve">          </TEXTMODE>
+    <ALLOWPAGING>false</ALLOWPAGING>
+    <AUTOSUGGEST>false</AUTOSUGGEST>
+    <CAUSEVALIDATION>false</CAUSEVALIDATION>
+    <DISPLAYIMAGE>true</DISPLAYIMAGE>
+    <PDF>false</PDF>
+    <PREVIEWPDF>false</PREVIEWPDF>
+    <RECORDSPERPAGE>1</RECORDSPERPAGE>
+    <REQUIRED>false</REQUIRED>
+    <SHOWCURRENTDATE>false</SHOWCURRENTDATE>
+    <SHOWPDF>false</SHOWPDF>
+    <BACKGROUNDIMAGE />
+    <BACKIMAGEURL />
+    <BUTONTYPE />
+    <EMAIL />'''
+      return xmlText
+   }
+
+   def cCubeStandardDropDownXML2()
+   {
+      def xmlText = '''
+    <NAVIGATEURL />
+    <NAVIGATION />
+    <OTHERDATASOURCE />
+    <CALCULATION />
+    <VALIDATION />
+    <ALERTCONDITION />
+    <FUNCTIONORDER />
+    <GRIDROWHEIGHT>0</GRIDROWHEIGHT>
+    <GRIDLINECOLOR />
+    <PDFPAGEID />
+    <GRIDBLANKROW>false</GRIDBLANKROW>
+    <TEXTALIGN />
+    <DIRECTION />
+    <GRIDCOLUMNS />
+    <GRIDCOLUMNBINDINGS />
+    <GRIDCOLUMNCHARTBINDINGS />
+    <PDFCONFIGURATION />
+    <SETFORNEWUSER />
+    <SETFOREXIST />
+    <WEBAPICONFIG />
+    <CONTROLROTATION>0</CONTROLROTATION>
+    <PDFORIENTATION />
+    <CONDTIONALFORMATTING />
+    <X1POSITION>0</X1POSITION>
+    <Y1POSITION>0</Y1POSITION>
+    <X2POSITION>0</X2POSITION>
+    <Y2POSITION>0</Y2POSITION>
+    <INVERT />
+    <CHARTSETTING />
+    <CHARTCONFIGURATION />
+    <SLIDERBARCOLOUR />
+    <SLIDERBARFIRSTNO>0</SLIDERBARFIRSTNO>
+    <SLIDERBARENDNO>0</SLIDERBARENDNO>
+    <SLIDERBARINCREMENTS>0</SLIDERBARINCREMENTS>
+    <SLIDERBARORIENTATION />
+    <SLIDERBARTOOLTIP>false</SLIDERBARTOOLTIP>
+    <SLIDERSTRETCHTOFIT>false</SLIDERSTRETCHTOFIT>
+    <PICKERDISPLAYTYPE />
+    <PICKERMODE />
+    <PICKERTHEME />
+    <PICKERSHOWCURRENT>false</PICKERSHOWCURRENT>
+    <SLIDERBARSHOWINCREMENTLABELS>false</SLIDERBARSHOWINCREMENTLABELS>
+    <BLANKOPTION>Not Include</BLANKOPTION>
+    <SELECTOPTION>Display</SELECTOPTION>
+    <FORMAT />
+    <SHORTCUTKEY />
+    <DEFAULTVALUE />
+    <SHOWSCROLL>true</SHOWSCROLL>
+    <CONTROLACTION />
+    <POSITIONING>Fixed</POSITIONING>
+    <OTHER>false</OTHER>
+    <OTHERDEFAULTVALUE>999</OTHERDEFAULTVALUE>
+    <RUNJAVASCRIPT />
+    <SUBFORMLINK />
+    <ENABLEQUERYSTRING>true</ENABLEQUERYSTRING>
+    <SKIN />
+    <TOOLBARMODE />
+    <TOOLS />
+    <TRACKCHANGES>false</TRACKCHANGES>'''
       return xmlText
    }
 
@@ -743,5 +901,412 @@ class OptCcGenerator {
     <TOOLS />
     <TRACKCHANGES>false</TRACKCHANGES>'''
       return xmlText
+   }
+
+   def cCubeStandardQuantCountTextboxXML()
+   {
+      def xmlText = '''
+    <CURRENCY />
+    <MAXLENGTH>50</MAXLENGTH>
+    <IMAGE />
+    <IMAGEURL />
+    <TARGET />
+    <TEXTMODE>SingleLine</TEXTMODE>
+    <ALLOWPAGING>false</ALLOWPAGING>
+    <AUTOSUGGEST>false</AUTOSUGGEST>
+    <CAUSEVALIDATION>true</CAUSEVALIDATION>
+    <DISPLAYIMAGE>true</DISPLAYIMAGE>
+    <PDF>false</PDF>
+    <PREVIEWPDF>false</PREVIEWPDF>
+    <RECORDSPERPAGE>1</RECORDSPERPAGE>
+    <REQUIRED>true</REQUIRED>
+    <SHOWCURRENTDATE>false</SHOWCURRENTDATE>
+    <SHOWPDF>false</SHOWPDF>
+    <BACKGROUNDIMAGE />
+    <BACKIMAGEURL />
+    <BUTONTYPE />
+    <EMAIL />
+    <ITEMSCOLLECTION />
+    <NAVIGATEURL />
+    <NAVIGATION />
+    <OTHERDATASOURCE />
+    <CALCULATION />
+    <VALIDATION>Set</VALIDATION>
+    <ALERTCONDITION />
+    <FUNCTIONORDER />
+    <GRIDROWHEIGHT>0</GRIDROWHEIGHT>
+    <GRIDLINECOLOR />
+    <PDFPAGEID />
+    <GRIDBLANKROW>false</GRIDBLANKROW>
+    <TEXTALIGN>Left</TEXTALIGN>
+    <DIRECTION />
+    <GRIDCOLUMNS />
+    <GRIDCOLUMNBINDINGS />
+    <GRIDCOLUMNCHARTBINDINGS />
+    <PDFCONFIGURATION />
+    <SETFORNEWUSER />
+    <SETFOREXIST />
+    <WEBAPICONFIG />
+    <CONTROLROTATION>0</CONTROLROTATION>
+    <PDFORIENTATION />
+    <CONDTIONALFORMATTING />
+    <X1POSITION>0</X1POSITION>
+    <Y1POSITION>0</Y1POSITION>
+    <X2POSITION>0</X2POSITION>
+    <Y2POSITION>0</Y2POSITION>
+    <INVERT />
+    <CHARTSETTING />
+    <CHARTCONFIGURATION />
+    <SLIDERBARCOLOUR />
+    <SLIDERBARFIRSTNO>0</SLIDERBARFIRSTNO>
+    <SLIDERBARENDNO>0</SLIDERBARENDNO>
+    <SLIDERBARINCREMENTS>0</SLIDERBARINCREMENTS>
+    <SLIDERBARORIENTATION />
+    <SLIDERBARTOOLTIP>false</SLIDERBARTOOLTIP>
+    <SLIDERSTRETCHTOFIT>false</SLIDERSTRETCHTOFIT>
+    <PICKERDISPLAYTYPE />
+    <PICKERMODE />
+    <PICKERTHEME />
+    <PICKERSHOWCURRENT>false</PICKERSHOWCURRENT>
+    <SLIDERBARSHOWINCREMENTLABELS>false</SLIDERBARSHOWINCREMENTLABELS>
+    <BLANKOPTION />
+    <SELECTOPTION />
+    <FORMAT />
+    <SHORTCUTKEY />
+    <DEFAULTVALUE />
+    <SHOWSCROLL>true</SHOWSCROLL>
+    <CONTROLACTION />
+    <POSITIONING>Fixed</POSITIONING>
+    <OTHER>false</OTHER>
+    <OTHERDEFAULTVALUE>999</OTHERDEFAULTVALUE>
+    <RUNJAVASCRIPT />
+    <SUBFORMLINK />
+    <ENABLEQUERYSTRING>true</ENABLEQUERYSTRING>
+    <SKIN>Default</SKIN>
+    <TOOLBARMODE>Default</TOOLBARMODE>
+    <TOOLS />
+    <TRACKCHANGES>false</TRACKCHANGES>'''
+      return xmlText
+   }
+
+   def cCubeStandardCalendarXML()
+   {
+      def xmlText = '''
+    <CURRENCY />
+    <MAXLENGTH>0</MAXLENGTH>
+    <IMAGE />
+    <IMAGEURL />
+    <TARGET />
+    <TEXTMODE xml:space="preserve">          </TEXTMODE>
+    <ALLOWPAGING>false</ALLOWPAGING>
+    <AUTOSUGGEST>false</AUTOSUGGEST>
+    <CAUSEVALIDATION>true</CAUSEVALIDATION>
+    <DISPLAYIMAGE>true</DISPLAYIMAGE>
+    <PDF>false</PDF>
+    <PREVIEWPDF>false</PREVIEWPDF>
+    <RECORDSPERPAGE>1</RECORDSPERPAGE>
+    <REQUIRED>false</REQUIRED>
+    <SHOWCURRENTDATE>false</SHOWCURRENTDATE>
+    <SHOWPDF>false</SHOWPDF>
+    <BACKGROUNDIMAGE />
+    <BACKIMAGEURL />
+    <BUTONTYPE />
+    <EMAIL />
+    <ITEMSCOLLECTION />
+    <NAVIGATEURL />
+    <NAVIGATION />
+    <OTHERDATASOURCE />
+    <CALCULATION />
+    <VALIDATION />
+    <ALERTCONDITION />
+    <FUNCTIONORDER />
+    <GRIDROWHEIGHT>0</GRIDROWHEIGHT>
+    <GRIDLINECOLOR />
+    <PDFPAGEID />
+    <GRIDBLANKROW>false</GRIDBLANKROW>
+    <TEXTALIGN />
+    <DIRECTION />
+    <GRIDCOLUMNS />
+    <GRIDCOLUMNBINDINGS />
+    <GRIDCOLUMNCHARTBINDINGS />
+    <PDFCONFIGURATION />
+    <SETFORNEWUSER />
+    <SETFOREXIST />
+    <WEBAPICONFIG />
+    <CONTROLROTATION>0</CONTROLROTATION>
+    <PDFORIENTATION />
+    <CONDTIONALFORMATTING />
+    <X1POSITION>0</X1POSITION>
+    <Y1POSITION>0</Y1POSITION>
+    <X2POSITION>0</X2POSITION>
+    <Y2POSITION>0</Y2POSITION>
+    <INVERT />
+    <CHARTSETTING />
+    <CHARTCONFIGURATION />
+    <SLIDERBARCOLOUR />
+    <SLIDERBARFIRSTNO>0</SLIDERBARFIRSTNO>
+    <SLIDERBARENDNO>0</SLIDERBARENDNO>
+    <SLIDERBARINCREMENTS>0</SLIDERBARINCREMENTS>
+    <SLIDERBARORIENTATION />
+    <SLIDERBARTOOLTIP>false</SLIDERBARTOOLTIP>
+    <SLIDERSTRETCHTOFIT>false</SLIDERSTRETCHTOFIT>
+    <PICKERDISPLAYTYPE />
+    <PICKERMODE />
+    <PICKERTHEME />
+    <PICKERSHOWCURRENT>false</PICKERSHOWCURRENT>
+    <SLIDERBARSHOWINCREMENTLABELS>false</SLIDERBARSHOWINCREMENTLABELS>
+    <BLANKOPTION />
+    <SELECTOPTION />
+    <FORMAT />
+    <SHORTCUTKEY />
+    <DEFAULTVALUE />
+    <SHOWSCROLL>true</SHOWSCROLL>
+    <CONTROLACTION />
+    <POSITIONING>Fixed</POSITIONING>
+    <OTHER>false</OTHER>
+    <OTHERDEFAULTVALUE>999</OTHERDEFAULTVALUE>
+    <RUNJAVASCRIPT />
+    <SUBFORMLINK />
+    <ENABLEQUERYSTRING>true</ENABLEQUERYSTRING>
+    <SKIN />
+    <TOOLBARMODE />
+    <TOOLS />
+    <TRACKCHANGES>false</TRACKCHANGES>'''
+      return xmlText
+   }
+
+   def cCubeStandardCheckBoxXML()
+   {
+      def xmlText = '''
+    <CURRENCY />
+    <MAXLENGTH>0</MAXLENGTH>
+    <IMAGE />
+    <IMAGEURL />
+    <TARGET />
+    <TEXTMODE xml:space="preserve">          </TEXTMODE>
+    <ALLOWPAGING>false</ALLOWPAGING>
+    <AUTOSUGGEST>false</AUTOSUGGEST>
+    <CAUSEVALIDATION>true</CAUSEVALIDATION>
+    <DISPLAYIMAGE>true</DISPLAYIMAGE>
+    <PDF>false</PDF>
+    <PREVIEWPDF>false</PREVIEWPDF>
+    <RECORDSPERPAGE>1</RECORDSPERPAGE>
+    <REQUIRED>false</REQUIRED>
+    <SHOWCURRENTDATE>false</SHOWCURRENTDATE>
+    <SHOWPDF>false</SHOWPDF>
+    <BACKGROUNDIMAGE />
+    <BACKIMAGEURL />
+    <BUTONTYPE />
+    <EMAIL />
+    <ITEMSCOLLECTION />
+    <NAVIGATEURL />
+    <NAVIGATION />
+    <OTHERDATASOURCE />
+    <CALCULATION />
+    <VALIDATION />
+    <ALERTCONDITION />
+    <FUNCTIONORDER />
+    <GRIDROWHEIGHT>0</GRIDROWHEIGHT>
+    <GRIDLINECOLOR />
+    <PDFPAGEID />
+    <GRIDBLANKROW>false</GRIDBLANKROW>
+    <TEXTALIGN />
+    <DIRECTION>Horizontal</DIRECTION>
+    <GRIDCOLUMNS />
+    <GRIDCOLUMNBINDINGS />
+    <GRIDCOLUMNCHARTBINDINGS />
+    <PDFCONFIGURATION />
+    <SETFORNEWUSER />
+    <SETFOREXIST />
+    <WEBAPICONFIG />
+    <CONTROLROTATION>0</CONTROLROTATION>
+    <PDFORIENTATION />
+    <CONDTIONALFORMATTING />
+    <X1POSITION>0</X1POSITION>
+    <Y1POSITION>0</Y1POSITION>
+    <X2POSITION>0</X2POSITION>
+    <Y2POSITION>0</Y2POSITION>
+    <INVERT />
+    <CHARTSETTING />
+    <CHARTCONFIGURATION />
+    <SLIDERBARCOLOUR />
+    <SLIDERBARFIRSTNO>0</SLIDERBARFIRSTNO>
+    <SLIDERBARENDNO>0</SLIDERBARENDNO>
+    <SLIDERBARINCREMENTS>0</SLIDERBARINCREMENTS>
+    <SLIDERBARORIENTATION />
+    <SLIDERBARTOOLTIP>false</SLIDERBARTOOLTIP>
+    <SLIDERSTRETCHTOFIT>false</SLIDERSTRETCHTOFIT>
+    <PICKERDISPLAYTYPE />
+    <PICKERMODE />
+    <PICKERTHEME />
+    <PICKERSHOWCURRENT>false</PICKERSHOWCURRENT>
+    <SLIDERBARSHOWINCREMENTLABELS>false</SLIDERBARSHOWINCREMENTLABELS>
+    <BLANKOPTION />
+    <SELECTOPTION />
+    <FORMAT />
+    <SHORTCUTKEY />
+    <DEFAULTVALUE>True</DEFAULTVALUE>
+    <SHOWSCROLL>true</SHOWSCROLL>
+    <CONTROLACTION />
+    <POSITIONING>Fixed</POSITIONING>
+    <OTHER>false</OTHER>
+    <OTHERDEFAULTVALUE>999</OTHERDEFAULTVALUE>
+    <RUNJAVASCRIPT />
+    <SUBFORMLINK />
+    <ENABLEQUERYSTRING>true</ENABLEQUERYSTRING>
+    <SKIN />
+    <TOOLBARMODE />
+    <TOOLS />
+    <TRACKCHANGES>false</TRACKCHANGES>'''
+      return xmlText
+   }
+
+   void genCtrlValid(ObjectNode o, MarkupBuilder b, String parent_arch_id)
+   {
+      //println "genCtrlValid Called"
+      // parent from now can be different than the parent if if the object has archetypeId
+      parent_arch_id = o.archetypeId ?: parent_arch_id
+
+      // Calculated position controls
+      def normOptId = optId - 2063
+   	def ctrlX = 13
+      def ctrlY = 9 + (normOptId * 50)
+
+
+      if (o.rmTypeName == "ELEMENT")
+      {
+         // constraints for ELEMENT.name and ELEMENT.value, can be null
+         // uses the first alternative (these are single attributes and can have alternative constraints)
+         def name = o.attributes.find { it.rmAttributeName == 'name' }?.children?.getAt(0)
+         def value = o.attributes.find { it.rmAttributeName == 'value' }?.children?.getAt(0)
+
+         // println "element name "+ opt.getTerm(parent_arch_id, o.nodeId)
+         // println "name variable = " + name
+         // println "value variable = " + value
+
+         if (name) {
+            //genCtrlValidFields(name, b, parent_arch_id)
+         }
+         else
+         {
+            //if(debug)  b.mkp.comment('Label')
+            //if(debug)  b.mkp.yieldUnescaped '\n\n  '
+
+            if (value) {
+               genCtrlValidFields(value, b, parent_arch_id)
+            }
+         }
+         
+
+         return
+      }
+
+      if (o.type == "ARCHETYPE_SLOT")
+      {
+         // b.div(class: o.rmTypeName +'  form-item') {
+         //    label("ARCHETYPE_SLOT is not supported yet, found at "+ o.path)
+         // }
+         return // Generator do not support slots on OPTs
+      }
+
+      // Process all non-ELEMENTs
+      
+
+      // label for intermediate nodes
+      def term = opt.getTerm(parent_arch_id, o.nodeId)
+
+      //println o.path
+
+      o.attributes.each { attr ->
+
+         // Sample avoid ACTIVITY.action_archetype_id
+         // This can be done in a generic way by adding a mapping rmTypeName -> rmAttributeNames
+         if (o.rmTypeName == 'ACTIVITY' && attr.rmAttributeName == 'action_archetype_id') return
+         if (o.rmTypeName == 'COMPOSITION' && attr.rmAttributeName == 'category') return
+         if (o.rmTypeName == 'ACTION' && attr.rmAttributeName == 'ism_transition') return
+
+         genCtrlValid(attr, b, parent_arch_id)
+      }
+   }
+
+   void genCtrlValid(AttributeNode a, MarkupBuilder b, String parent_arch_id)
+   {
+      a.children.each {
+         optId++
+         genCtrlValid(it, b, parent_arch_id)
+      }
+   }
+
+   // TODO: refactor in different functions
+   void genCtrlValidFields(ObjectNode node, MarkupBuilder b, String parent_arch_id)
+   {
+      // Calculated position controls
+      def normOptId = optId - 2063
+   	def ctrlX = 13
+      def ctrlY = 9 + (normOptId * 50)
+
+      switch (node.rmTypeName)
+      {
+         case 'DV_TEXT':
+         case 'DV_CODED_TEXT': // Dropdown
+         case 'DV_ORDINAL': // Dropdown
+         case 'DV_DATE':
+         case 'DV_BOOLEAN':
+            optId++
+            //println node.rmTypeName
+            //if(debug)  b.mkp.comment(node.rmTypeName)
+         break
+         case 'DV_QUANTITY':
+            optId++
+            println node.rmTypeName
+            if(debug)  b.mkp.comment(node.rmTypeName)
+            b.TBLCONTROLVALIDATION() {
+               CONTROLVALIDATIONID('CVALID0' + (20 + normOptId))
+               FORMID (frmId)
+               OPTIONID ('OPT' + optId)
+               REQUIRED('true')
+               REQUIREDERRORMESSAGE {}
+               MINVALUE {}
+               MAXVALUE {}
+               RANGEDATATYPE('Select')
+               RANGEERRORMESSAGE {}
+               REGULAREXPRESSIONFORMULA('^\\d+$')
+               REGULARERRORMESSAGE('Only digits are allowed.')
+            }
+            if(debug)  b.mkp.yieldUnescaped '\n\n\n  '
+         break
+         case 'DV_COUNT':
+            optId++
+            println node.rmTypeName
+            if(debug)  b.mkp.comment(node.rmTypeName)
+            //println node.attributes.children.item.range.lower
+            //def range = node.attributes.find{ it.rmAttributeName == 'defining_code' }.children[0]
+            def rangeNode = node.attributes.children.item.range[0]
+            def lowerRng= rangeNode.lower[0]
+            def upperRng = rangeNode.upper[0]
+            b.TBLCONTROLVALIDATION() {
+               CONTROLVALIDATIONID('CVALID0' + (20 + normOptId))
+               FORMID (frmId)
+               OPTIONID ('OPT' + optId)
+               REQUIRED('true')
+               REQUIREDERRORMESSAGE {}
+               MINVALUE (lowerRng)
+               MAXVALUE (upperRng)
+               RANGEDATATYPE('Integer')
+               RANGEERRORMESSAGE ('Out of range')
+               REGULAREXPRESSIONFORMULA('^\\d+$')
+               REGULARERRORMESSAGE('Only digits are allowed.')
+            }
+            if(debug)  b.mkp.yieldUnescaped '\n\n\n  '
+         break
+         // case 'DV_TIME':
+         //    builder.input(type:'time', name:node.path, class: node.rmTypeName +' form-control')
+         // break
+         // case 'DV_DATE_TIME':
+         //    builder.input(type:'datetime-local', name:node.path, class: node.rmTypeName +' form-control')
+         // break
+         default: // TODO: generar campos para los DV_INTERVAL
+            println "Datatype "+ node.rmTypeName +" not supported yet"
+      }
    }
 }
