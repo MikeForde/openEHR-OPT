@@ -107,21 +107,21 @@ class OptCcGenerator {
          // Three pass process
          // First Pass --> TBLPAGECONTROLCOMMONPROPERTIES - one per control including seperate ones for labels
          initOptId = optId
-         println 'Common Properties'
+         println 'Building Common Properties...'
          if(debug) mkp.comment('Common Properties')
          if(debug) mkp.yieldUnescaped '\n  '
          genCtrlCommonProps(opt.definition, builder, opt.definition.archetypeId)
 
          // Second Pass --> TBLPAGECONTROLPROPERTIES - one per control including seperate ones for labels
          optId = initOptId // Reset optId so matches above
-         println 'Control Properties'
+         println 'Building Control Properties...'
          if(debug) mkp.comment('Control Properties')
          if(debug) mkp.yieldUnescaped '\n  '
          genCtrlProps(opt.definition, builder, opt.definition.archetypeId)
 
          // Third Pass --> TBLCONTROLVALIDATION - only for DV_QUANTITY and DV_COUNT
          optId = initOptId // Reset optId so matches above
-         println 'Validation Elements for Quantity and Count'
+         println 'Building Validation Elements for Quantity and Count (if present)...'
          if(debug) mkp.comment('Validation Elements for Quantity and Count')
          if(debug) mkp.yieldUnescaped '\n  '
          genCtrlValid(opt.definition, builder, opt.definition.archetypeId)
@@ -162,6 +162,8 @@ class OptCcGenerator {
          // println "name variable = " + name
          // println "value variable = " + value
 
+         String sExtraLabel = ''
+
          
 
          if (name) {
@@ -169,35 +171,50 @@ class OptCcGenerator {
          }
          else
          {
+            if (value) {
+               iCtrlY = iCtrlY + 26
+               sExtraLabel = genCtrlCommonPropsFields(value, b, parent_arch_id)
+               if(debug) b.mkp.yieldUnescaped '\n\n  '
+            }
+
+            iCtrlY = iCtrlY + 26
             if(debug) b.mkp.comment('Label')
+
+            // Calculate required width of label
+            def sLabel = opt.getTerm(parent_arch_id, o.nodeId) + sExtraLabel
+            def sUpperCase = ((sLabel =~ /[A-Z]/).findAll()).join()
+            def sLowerCase = ((sLabel =~ /[a-z0-9]/).findAll()).join()
+            def iLabelWidth = (12 * sUpperCase.length()) + (8 * sLowerCase.length())
+            
+            if(debug) {
+               println sLabel + " - " + iLabelWidth
+            } else {
+               println sLabel
+            }    
+
             b.TBLPAGECONTROLCOMMONPROPERTIES() {
                // Label
-               OPTIONID ('OPT' + optId)
+               OPTIONID ('OPT' + (optId))
                PAGEID (pgId)
                TEMPLATEID {}
                FORMID (frmId)
                CONTROLID('Label' + normOptId)
                CONTROLTYPE ('8')
                PARENTCONTROLID (pgId)
-               TEXT(opt.getTerm(parent_arch_id, o.nodeId))
+               TEXT(sLabel)
                XPOSITION (iCtrlX)
-               YPOSITION (iCtrlY)
+               YPOSITION (iCtrlY - 52)
                mkp.yieldUnescaped cCubeStandardCommonXML1()
-               WIDTH('120') // may need changing depending on text size
+               WIDTH(iLabelWidth)
                mkp.yieldUnescaped cCubeStandardCommonXML2()
                TABINDEX(normOptId)
                mkp.yieldUnescaped cCubeStandardCommonXML3()
                CSSSTYLE('eformLabel ')
                mkp.yieldUnescaped cCubeStandardCommonXML4()
             }
-            if(debug) b.mkp.yieldUnescaped '\n\n  '
+            if(debug) b.mkp.yieldUnescaped '\n\n\n  '
 
-            if (value) {
-               iCtrlY = iCtrlY + 26
-               genCtrlCommonPropsFields(value, b, parent_arch_id)
-               if(debug) b.mkp.yieldUnescaped '\n\n\n  '
-            }
-            iCtrlY = iCtrlY + 26
+            
             if(iCtrlY > (pgHeight- 52)){
                iCtrlY = 5
                iCtrlX = iCtrlX + 150
@@ -254,10 +271,11 @@ class OptCcGenerator {
    }
 
    // TODO: refactor in different functions
-   void genCtrlCommonPropsFields(ObjectNode node, MarkupBuilder b, String parent_arch_id)
+   String genCtrlCommonPropsFields(ObjectNode node, MarkupBuilder b, String parent_arch_id)
    {
       // Calculated position controls
       def normOptId = optId - 2063
+      String rtnForLabel = ''
 
       switch (node.rmTypeName)
       {
@@ -266,10 +284,10 @@ class OptCcGenerator {
          case 'DV_COUNT':
             //builder.textarea(class: node.rmTypeName +' form-control', name:node.path, '')
             optId++
-            println node.rmTypeName
+            printf node.rmTypeName + ": "
             if(debug) b.mkp.comment(node.rmTypeName)
             b.TBLPAGECONTROLCOMMONPROPERTIES() {
-               OPTIONID ('OPT' + optId)
+               OPTIONID ('OPT' + (optId-1))
                PAGEID (pgId)
                TEMPLATEID {}
                FORMID (frmId)
@@ -291,10 +309,10 @@ class OptCcGenerator {
          case 'DV_CODED_TEXT':
          case 'DV_ORDINAL':
             optId++
-            println node.rmTypeName
+            printf node.rmTypeName + ": "
             if(debug)  b.mkp.comment(node.rmTypeName)
             b.TBLPAGECONTROLCOMMONPROPERTIES() {
-               OPTIONID ('OPT' + optId)
+               OPTIONID ('OPT' + (optId-1))
                PAGEID (pgId)
                TEMPLATEID {}
                FORMID (frmId)
@@ -318,10 +336,10 @@ class OptCcGenerator {
          // break
          case 'DV_DATE':
             optId++
-            println "DV_DATE"
+            printf node.rmTypeName + ": "
             if(debug)  b.mkp.comment(node.rmTypeName)
             b.TBLPAGECONTROLCOMMONPROPERTIES() {
-               OPTIONID ('OPT' + optId)
+               OPTIONID ('OPT' + (optId-1))
                PAGEID (pgId)
                TEMPLATEID {}
                FORMID (frmId)
@@ -345,10 +363,10 @@ class OptCcGenerator {
          // break
          case 'DV_BOOLEAN':
             optId++
-            println "DV_BOOLEAN"
+            printf node.rmTypeName + ": "
             if(debug)  b.mkp.comment(node.rmTypeName)
             b.TBLPAGECONTROLCOMMONPROPERTIES() {
-               OPTIONID ('OPT' + optId)
+               OPTIONID ('OPT' + (optId-1))
                PAGEID (pgId)
                TEMPLATEID {}
                FORMID (frmId)
@@ -370,6 +388,35 @@ class OptCcGenerator {
          default: // TODO: generar campos para los DV_INTERVAL
             println "Datatype "+ node.rmTypeName +" not supported yet"
       }
+
+      // Create rtnForLabel
+      switch (node.rmTypeName)
+      {
+         case 'DV_QUANTITY':
+            if (node.list.size() == 0)
+               {
+                  // input(type:'text', name:node.path+'/units', class: node.rmTypeName +' form-control')
+               }
+               else
+               {
+                  node.list.units.each { u ->
+
+                     rtnForLabel = rtnForLabel + ' Units: ' + u
+                  }
+               }
+         break
+         case 'DV_COUNT':
+            def rangeNode = node.attributes.children.item.range[0]
+            def lowerRng= rangeNode.lower[0]
+            def upperRng = rangeNode.upper[0]
+            rtnForLabel = ' Range('+ lowerRng + '-' + upperRng + ')'
+         break
+         default:
+            rtnForLabel = ''
+      }
+
+
+      return rtnForLabel
    }
 
    def cCubeStandardCommonXML1()
@@ -463,6 +510,11 @@ class OptCcGenerator {
          }
          else
          {
+            if (value) {
+               genCtrlPropsFields(value, b, parent_arch_id)
+               if(debug)  b.mkp.yieldUnescaped '\n\n '
+            }
+
             if(debug)  b.mkp.comment('Label')
             b.TBLPAGECONTROLPROPERTIES() {
                // Label
@@ -471,12 +523,7 @@ class OptCcGenerator {
                FORMID (frmId)
                mkp.yieldUnescaped cCubeStandardLabelXML()
             }
-            if(debug)  b.mkp.yieldUnescaped '\n\n  '
-
-            if (value) {
-               genCtrlPropsFields(value, b, parent_arch_id)
-               if(debug)  b.mkp.yieldUnescaped '\n\n\n  '
-            }
+            if(debug)  b.mkp.yieldUnescaped '\n\n\n  '
          }
          
 
@@ -523,27 +570,25 @@ class OptCcGenerator {
    void genCtrlPropsFields(ObjectNode node, MarkupBuilder b, String parent_arch_id)
    {
       // Calculated position controls
-      def normOptId = optId - 2063
-   	def ctrlX = 13
-      def ctrlY = 9 + (normOptId * 50)
+      //def normOptId = optId - 2063
 
       switch (node.rmTypeName)
       {
          case 'DV_TEXT':
             //builder.textarea(class: node.rmTypeName +' form-control', name:node.path, '')
             optId++
-            println node.rmTypeName
+            if(debug) println node.rmTypeName
             if(debug)  b.mkp.comment(node.rmTypeName)
             b.TBLPAGECONTROLPROPERTIES() {
-               PROPERTYID('CTRLPR' + optId)
-               OPTIONID ('OPT' + optId)
+               PROPERTYID('CTRLPR' + (optId-1))
+               OPTIONID ('OPT' + (optId-1))
                FORMID (frmId)
                mkp.yieldUnescaped cCubeStandardTextboxXML()
             }
          break
          case 'DV_CODED_TEXT': // Dropdown
             optId++
-            println node.rmTypeName
+            if(debug) println node.rmTypeName
             if(debug)  b.mkp.comment(node.rmTypeName)
             // Get the dropdown items
             def constraint = node.attributes.find{ it.rmAttributeName == 'defining_code' }.children[0]
@@ -554,8 +599,8 @@ class OptCcGenerator {
             def listItemsAsString = listItems.join(",")
             // Build xml
             b.TBLPAGECONTROLPROPERTIES() {
-               PROPERTYID('CTRLPR' + optId)
-               OPTIONID ('OPT' + optId)
+               PROPERTYID('CTRLPR' + (optId-1))
+               OPTIONID ('OPT' + (optId-1))
                FORMID (frmId)
                mkp.yieldUnescaped cCubeStandardDropDownXML1()
                ITEMSCOLLECTION(listItemsAsString)
@@ -564,7 +609,7 @@ class OptCcGenerator {
          break
          case 'DV_ORDINAL': // Dropdown
             optId++
-            println node.rmTypeName
+            if(debug) println node.rmTypeName
             if(debug)  b.mkp.comment(node.rmTypeName)
             // Get the dropdown items
             def listItems = []
@@ -577,8 +622,8 @@ class OptCcGenerator {
             def ordinalsAsString = ordinals.join(",")
             // Build xml
             b.TBLPAGECONTROLPROPERTIES() {
-               PROPERTYID('CTRLPR' + optId)
-               OPTIONID ('OPT' + optId)
+               PROPERTYID('CTRLPR' + (optId-1))
+               OPTIONID ('OPT' + (optId-1))
                FORMID (frmId)
                mkp.yieldUnescaped cCubeStandardDropDownXML1()
                ITEMSCOLLECTION(listItemsAsString + ':' + ordinalsAsString)
@@ -589,11 +634,11 @@ class OptCcGenerator {
          case 'DV_COUNT':
             //builder.textarea(class: node.rmTypeName +' form-control', name:node.path, '')
             optId++
-            println node.rmTypeName
+            if(debug) println node.rmTypeName
             if(debug)  b.mkp.comment(node.rmTypeName)
             b.TBLPAGECONTROLPROPERTIES() {
-               PROPERTYID('CTRLPR' + optId)
-               OPTIONID ('OPT' + optId)
+               PROPERTYID('CTRLPR' + (optId-1))
+               OPTIONID ('OPT' + (optId-1))
                FORMID (frmId)
                mkp.yieldUnescaped cCubeStandardQuantCountTextboxXML()
             }
@@ -603,11 +648,11 @@ class OptCcGenerator {
          // break
          case 'DV_DATE':
             optId++
-            println "DV_DATE"
+            if(debug) println "DV_DATE"
             if(debug)  b.mkp.comment(node.rmTypeName)
             b.TBLPAGECONTROLPROPERTIES() {
-               PROPERTYID('CTRLPR' + optId)
-               OPTIONID ('OPT' + optId)
+               PROPERTYID('CTRLPR' + (optId-1))
+               OPTIONID ('OPT' + (optId-1))
                FORMID (frmId)
                mkp.yieldUnescaped cCubeStandardCalendarXML()
             }
@@ -617,11 +662,11 @@ class OptCcGenerator {
          // break
          case 'DV_BOOLEAN':
             optId++
-            println "DV_BOOLEAN"
+            if(debug) println "DV_BOOLEAN"
             if(debug)  b.mkp.comment(node.rmTypeName)
             b.TBLPAGECONTROLPROPERTIES() {
-               PROPERTYID('CTRLPR' + optId)
-               OPTIONID ('OPT' + optId)
+               PROPERTYID('CTRLPR' + (optId-1))
+               OPTIONID ('OPT' + (optId-1))
                FORMID (frmId)
                mkp.yieldUnescaped cCubeStandardCheckBoxXML()
             }
@@ -1168,9 +1213,9 @@ class OptCcGenerator {
       parent_arch_id = o.archetypeId ?: parent_arch_id
 
       // Calculated position controls
-      def normOptId = optId - 2063
-   	def ctrlX = 13
-      def ctrlY = 9 + (normOptId * 50)
+      // def normOptId = optId - 2063
+   	// def ctrlX = 13
+      // def ctrlY = 9 + (normOptId * 50)
 
 
       if (o.rmTypeName == "ELEMENT")
@@ -1242,8 +1287,8 @@ class OptCcGenerator {
    {
       // Calculated position controls
       def normOptId = optId - 2063
-   	def ctrlX = 13
-      def ctrlY = 9 + (normOptId * 50)
+   	// def ctrlX = 13
+      // def ctrlY = 9 + (normOptId * 50)
 
       switch (node.rmTypeName)
       {
@@ -1258,12 +1303,12 @@ class OptCcGenerator {
          break
          case 'DV_QUANTITY':
             optId++
-            println node.rmTypeName
+            if(debug) println node.rmTypeName
             if(debug)  b.mkp.comment(node.rmTypeName)
             b.TBLCONTROLVALIDATION() {
                CONTROLVALIDATIONID('CVALID0' + (20 + normOptId))
                FORMID (frmId)
-               OPTIONID ('OPT' + optId)
+               OPTIONID ('OPT' + (optId-1))
                REQUIRED('true')
                REQUIREDERRORMESSAGE {}
                MINVALUE {}
@@ -1277,7 +1322,7 @@ class OptCcGenerator {
          break
          case 'DV_COUNT':
             optId++
-            println node.rmTypeName
+            if(debug) println node.rmTypeName
             if(debug)  b.mkp.comment(node.rmTypeName)
             //println node.attributes.children.item.range.lower
             //def range = node.attributes.find{ it.rmAttributeName == 'defining_code' }.children[0]
@@ -1287,7 +1332,7 @@ class OptCcGenerator {
             b.TBLCONTROLVALIDATION() {
                CONTROLVALIDATIONID('CVALID0' + (20 + normOptId))
                FORMID (frmId)
-               OPTIONID ('OPT' + optId)
+               OPTIONID ('OPT' + (optId-1))
                REQUIRED('true')
                REQUIREDERRORMESSAGE {}
                MINVALUE (lowerRng)
