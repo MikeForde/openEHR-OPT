@@ -335,6 +335,7 @@ class OptCcGenerator {
          //    builder.input(type:'time', name:node.path, class: node.rmTypeName +' form-control')
          // break
          case 'DV_DATE':
+         case 'DV_DATE_TIME':
             optId++
             printf node.rmTypeName + ": "
             if(debug)  b.mkp.comment(node.rmTypeName)
@@ -407,9 +408,16 @@ class OptCcGenerator {
          break
          case 'DV_COUNT':
             def rangeNode = node.attributes.children.item.range[0]
-            def lowerRng= rangeNode.lower[0]
-            def upperRng = rangeNode.upper[0]
-            rtnForLabel = ' Range('+ lowerRng + '-' + upperRng + ')'
+            def lowerRng
+            def upperRng
+            if (rangeNode != null) {
+               lowerRng= rangeNode.lower[0] == null ? 0 : rangeNode.lower[0]
+               upperRng= rangeNode.upper[0] == null ? 0 : rangeNode.upper[0]
+               rtnForLabel = ' Range('+ lowerRng + '-' + upperRng + ')'
+            } else {
+               rtnForLabel = ''
+            }
+            
          break
          default:
             rtnForLabel = ''
@@ -647,6 +655,7 @@ class OptCcGenerator {
          //    builder.input(type:'time', name:node.path, class: node.rmTypeName +' form-control')
          // break
          case 'DV_DATE':
+         case 'DV_DATE_TIME':
             optId++
             if(debug) println "DV_DATE"
             if(debug)  b.mkp.comment(node.rmTypeName)
@@ -1296,6 +1305,7 @@ class OptCcGenerator {
          case 'DV_CODED_TEXT': // Dropdown
          case 'DV_ORDINAL': // Dropdown
          case 'DV_DATE':
+         case 'DV_DATE_TIME':
          case 'DV_BOOLEAN':
             optId++
             //println node.rmTypeName
@@ -1327,8 +1337,15 @@ class OptCcGenerator {
             //println node.attributes.children.item.range.lower
             //def range = node.attributes.find{ it.rmAttributeName == 'defining_code' }.children[0]
             def rangeNode = node.attributes.children.item.range[0]
-            def lowerRng= rangeNode.lower[0]
-            def upperRng = rangeNode.upper[0]
+            def lowerRng
+            def upperRng
+            if (rangeNode != null) {
+               lowerRng= rangeNode.lower[0] == null ? 0 : rangeNode.lower[0]
+               upperRng = rangeNode.upper[0] == null ? 0 : rangeNode.upper[0]
+            } else {
+               lowerRng= 0
+               upperRng = 0
+            }
             b.TBLCONTROLVALIDATION() {
                CONTROLVALIDATIONID('CVALID0' + (20 + normOptId))
                FORMID (frmId)
