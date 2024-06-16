@@ -2,6 +2,18 @@ This Forked Version
 ===========
 Modified to allow generation of cCube eForms
 
+Use the Dockerfile for installation - either VSCode->Docker or Podman
+
+Remember to change the JAVA to either ARM or AMD (as per comments in the Dockerfile)
+
+Typical Structure of OPT Repository (for the purposes of easily generating cCube eForms)
+1. COMP element that has one OBSERVATION
+2. OBSERVATION - that could contain fields but better to use CLUSTERS
+3. One or more CLUSTERS that contain fields
+4. Can't create TEMPLATE until COMP element exists
+
+So - in effect - the TEMPLATE contains the COMPOSITION, which contains the OBSERVATION which contains one or more CLUSTERS.
+
 Original README.md as below
 ===========
 
